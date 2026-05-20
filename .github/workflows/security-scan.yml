@@ -16,12 +16,12 @@ on:
         type: string
         default: '.'
 
-
   # Dummy push trigger — path never exists; prevents GitHub phantom failure runs
   # when this reusable workflow file is committed to .github/workflows/
   push:
     paths:
       - '.github/workflows/.no-direct-trigger'
+
 jobs:
   govulncheck:
     name: Go Vulnerability Check
@@ -29,6 +29,10 @@ jobs:
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
+    env:
+      GONOSUMCHECK: "github.com/easive/*"
+      GONOSUMDB: "github.com/easive/*"
+      GOFLAGS: "-mod=mod"
 
     steps:
       - name: Checkout code
@@ -50,6 +54,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-${{ inputs.go-version }}-
             ${{ runner.os }}-go-
+
+      - name: Tidy and download Go modules
+        run: |
+          go mod tidy
+          go mod download
 
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
