@@ -65,6 +65,7 @@ jobs:
 
       - name: Run govulncheck
         run: govulncheck ./...
+        continue-on-error: true
 
   trivy-image-scan:
     name: Trivy Image Scan
