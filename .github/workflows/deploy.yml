@@ -1,0 +1,83 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Target environment (staging or production)'
+        type: string
+        required: true
+      service-name:
+        description: 'Service name (used for deployment and rollout status)'
+        type: string
+        required: true
+      image-tag:
+        description: 'Docker image tag to deploy'
+        type: string
+        required: true
+      kube-namespace:
+        description: 'Kubernetes namespace'
+        type: string
+        default: 'omnidata'
+    secrets:
+      KUBECONFIG_STAGING:
+        description: 'Kubeconfig for staging cluster (base64-encoded)'
+        required: false
+      KUBECONFIG_PRODUCTION:
+        description: 'Kubeconfig for production cluster (base64-encoded)'
+        required: false
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+
+      - name: Set up Kustomize
+        uses: imranismail/setup-kustomize@v2
+        with:
+          kustomize-version: 'latest'
+
+      - name: Configure kubeconfig (staging)
+        if: inputs.environment == 'staging'
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Configure kubeconfig (production)
+        if: inputs.environment == 'production'
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_PRODUCTION }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Set image tag in Kustomize
+        working-directory: k8s
+        run: |
+          kustomize edit set image \
+            "ghcr.io/easive/${{ inputs.service-name }}=ghcr.io/easive/${{ inputs.service-name }}:${{ inputs.image-tag }}"
+
+      - name: Apply Kubernetes manifests
+        run: kubectl apply -k k8s/
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/${{ inputs.service-name }} \
+            -n ${{ inputs.kube-namespace }} \
+            --timeout=300s
+
+      - name: Verify deployment
+        run: |
+          kubectl get deployment/${{ inputs.service-name }} \
+            -n ${{ inputs.kube-namespace }} \
+            -o wide

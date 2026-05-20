@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  workflow_call:
+    inputs:
+      service-name:
+        description: 'Service name'
+        type: string
+        required: true
+      environment:
+        description: 'Target environment'
+        type: string
+        default: 'production'
+      go-version:
+        description: 'Go version to use'
+        type: string
+        default: '1.22'
+    secrets:
+      KUBECONFIG_STAGING:
+        description: 'Kubeconfig for staging cluster (base64-encoded)'
+        required: false
+      KUBECONFIG_PRODUCTION:
+        description: 'Kubeconfig for production cluster (base64-encoded)'
+        required: false
+
+jobs:
+  build-and-publish:
+    name: Build and Publish
+    uses: easive/omnidata-cicd-templates/.github/workflows/build-and-publish.yml@main
+    with:
+      service-name: ${{ inputs.service-name }}
+      go-version: ${{ inputs.go-version }}
+    permissions:
+      contents: read
+      packages: write
+
+  deploy:
+    name: Deploy
+    needs: build-and-publish
+    uses: easive/omnidata-cicd-templates/.github/workflows/deploy.yml@main
+    with:
+      environment: ${{ inputs.environment }}
+      service-name: ${{ inputs.service-name }}
+      image-tag: ${{ github.ref_name }}
+    secrets:
+      KUBECONFIG_STAGING: ${{ secrets.KUBECONFIG_STAGING }}
+      KUBECONFIG_PRODUCTION: ${{ secrets.KUBECONFIG_PRODUCTION }}

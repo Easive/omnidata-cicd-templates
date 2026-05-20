@@ -1,0 +1,78 @@
+name: Integration Test
+
+on:
+  workflow_call:
+    inputs:
+      go-version:
+        description: 'Go version to use'
+        type: string
+        default: '1.22'
+      compose-file:
+        description: 'Docker Compose file for test dependencies'
+        type: string
+        default: 'docker-compose.test.yml'
+      working-directory:
+        description: 'Working directory'
+        type: string
+        default: '.'
+
+jobs:
+  integration-test:
+    name: Integration Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version }}
+          cache: false
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ inputs.go-version }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-${{ inputs.go-version }}-
+            ${{ runner.os }}-go-
+
+      - name: Download Go modules
+        run: go mod download
+
+      - name: Start Docker Compose services
+        run: docker compose -f ${{ inputs.compose-file }} up -d --wait
+
+      - name: Wait for healthchecks
+        run: |
+          echo "Waiting for services to become healthy (up to 60s)..."
+          timeout 60 bash -c '
+            until docker compose -f ${{ inputs.compose-file }} ps --format json \
+              | python3 -c "
+import sys, json
+data = sys.stdin.read().strip()
+services = [json.loads(line) for line in data.splitlines() if line.strip()]
+unhealthy = [s[\"Name\"] for s in services if s.get(\"Health\", \"healthy\") not in (\"healthy\", \"\")]
+if unhealthy:
+    print(\"Still waiting for:\", unhealthy, file=sys.stderr)
+    sys.exit(1)
+" 2>&1; do
+              sleep 2
+            done
+          '
+          echo "All services are healthy."
+
+      - name: Run integration tests
+        run: go test -tags integration -timeout 5m ./...
+
+      - name: Stop Docker Compose services
+        if: always()
+        run: docker compose -f ${{ inputs.compose-file }} down --volumes --remove-orphans
