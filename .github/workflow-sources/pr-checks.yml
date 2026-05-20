@@ -1,0 +1,29 @@
+name: PR Checks
+
+on:
+  workflow_call:
+    inputs:
+      go-version:
+        description: 'Go version to use'
+        type: string
+        default: '1.22'
+      working-directory:
+        description: 'Working directory'
+        type: string
+        default: '.'
+
+jobs:
+  lint-and-test:
+    name: Lint and Test
+    uses: easive/omnidata-cicd-templates/.github/workflows/lint-and-test.yml@main
+    with:
+      go-version: ${{ inputs.go-version }}
+      working-directory: ${{ inputs.working-directory }}
+
+  security-scan:
+    name: Security Scan
+    uses: easive/omnidata-cicd-templates/.github/workflows/security-scan.yml@main
+    with:
+      go-version: ${{ inputs.go-version }}
+      working-directory: ${{ inputs.working-directory }}
+      # No image-name: only govulncheck runs on PRs (no built image yet)
