@@ -19,6 +19,10 @@ jobs:
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
+    env:
+      GONOSUMCHECK: "github.com/easive/*"
+      GONOSUMDB: "github.com/easive/*"
+      GOFLAGS: "-mod=mod"
 
     steps:
       - name: Checkout code
@@ -41,8 +45,10 @@ jobs:
             ${{ runner.os }}-go-${{ inputs.go-version }}-
             ${{ runner.os }}-go-
 
-      - name: Download Go modules
-        run: go mod download
+      - name: Tidy and download Go modules
+        run: |
+          go mod tidy
+          go mod download
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
