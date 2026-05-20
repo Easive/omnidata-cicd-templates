@@ -1,0 +1,87 @@
+run:
+  timeout: 5m
+  go: '1.22'
+  tests: true
+  allow-parallel-runners: true
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gofmt
+    - goimports
+    - misspell
+    - revive
+    - exhaustive
+
+linters-settings:
+  gofmt:
+    simplify: true
+
+  goimports:
+    local-prefixes: github.com/easive
+
+  misspell:
+    locale: US
+
+  revive:
+    rules:
+      - name: exported
+        severity: warning
+      - name: var-naming
+        severity: warning
+      - name: unused-parameter
+        severity: warning
+      - name: error-return
+        severity: warning
+      - name: error-strings
+        severity: warning
+      - name: if-return
+        severity: warning
+      - name: increment-decrement
+        severity: warning
+      - name: range
+        severity: warning
+      - name: receiver-naming
+        severity: warning
+      - name: superfluous-else
+        severity: warning
+      - name: time-naming
+        severity: warning
+      - name: unexported-return
+        severity: warning
+
+  exhaustive:
+    default-signifies-exhaustive: true
+
+issues:
+  max-issues-per-linter: 50
+  max-same-issues: 10
+
+  exclude-rules:
+    # Ignore G104 (errors unhandled) in test files — common for test helpers
+    - path: '_test\.go'
+      linters:
+        - errcheck
+      text: 'G104'
+
+    # Ignore shadow declarations in test files
+    - path: '_test\.go'
+      linters:
+        - govet
+      text: 'shadow'
+
+    # Allow dot imports in test files (e.g., . "github.com/onsi/gomega")
+    - path: '_test\.go'
+      linters:
+        - revive
+      text: 'dot-imports'
+
+  exclude-dirs:
+    - vendor
+    - testdata
+    - generated
