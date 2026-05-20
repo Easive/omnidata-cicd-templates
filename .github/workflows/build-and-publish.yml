@@ -23,6 +23,12 @@ on:
         description: 'The image digest'
         value: ${{ jobs.build-and-publish.outputs.image-digest }}
 
+
+  # Dummy push trigger — path never exists; prevents GitHub phantom failure runs
+  # when this reusable workflow file is committed to .github/workflows/
+  push:
+    paths:
+      - '.github/workflows/.no-direct-trigger'
 jobs:
   build-and-publish:
     name: Build and Publish Docker Image
