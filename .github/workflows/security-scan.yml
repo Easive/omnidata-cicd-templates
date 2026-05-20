@@ -16,6 +16,12 @@ on:
         type: string
         default: '.'
 
+
+  # Dummy push trigger — path never exists; prevents GitHub phantom failure runs
+  # when this reusable workflow file is committed to .github/workflows/
+  push:
+    paths:
+      - '.github/workflows/.no-direct-trigger'
 jobs:
   govulncheck:
     name: Go Vulnerability Check
