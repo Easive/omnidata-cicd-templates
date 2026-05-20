@@ -1,0 +1,51 @@
+# Copie este arquivo para .github/workflows/ci.yml no seu repositório de serviço
+# Substitua SERVICE_NAME pelo nome do serviço (ex: omnidata-schema-worker)
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+      - 'hotfix/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  pr-checks:
+    uses: easive/omnidata-cicd-templates/.github/workflows/pr-checks.yml@main
+    with:
+      go-version: '1.22'
+
+  build-and-publish:
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/v')
+    needs: pr-checks
+    uses: easive/omnidata-cicd-templates/.github/workflows/build-and-publish.yml@main
+    with:
+      service-name: SERVICE_NAME  # <-- substituir
+    permissions:
+      contents: read
+      packages: write
+
+  deploy-staging:
+    if: github.ref == 'refs/heads/develop'
+    needs: build-and-publish
+    uses: easive/omnidata-cicd-templates/.github/workflows/deploy.yml@main
+    with:
+      environment: staging
+      service-name: SERVICE_NAME  # <-- substituir
+      image-tag: sha-${{ github.sha }}
+    secrets: inherit
+
+  deploy-production:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build-and-publish
+    uses: easive/omnidata-cicd-templates/.github/workflows/deploy.yml@main
+    with:
+      environment: production
+      service-name: SERVICE_NAME  # <-- substituir
+      image-tag: ${{ github.ref_name }}
+    secrets: inherit
