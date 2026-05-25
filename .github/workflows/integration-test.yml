@@ -6,7 +6,7 @@ on:
       go-version:
         description: 'Go version to use'
         type: string
-        default: '1.22'
+        default: '1.24'
       compose-file:
         description: 'Docker Compose file for test dependencies'
         type: string

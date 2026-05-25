@@ -6,7 +6,7 @@ on:
       go-version:
         description: 'Go version to use'
         type: string
-        default: '1.22'
+        default: '1.24'
       image-name:
         description: 'Docker image to scan with Trivy (optional)'
         type: string
